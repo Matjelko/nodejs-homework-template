@@ -12,13 +12,7 @@ const router = express.Router()
 
 router.get('/', async (req, res, next) => {
   const contacts = await Contact.find(); 
-  res.json({
-    status: 'success',
-    code: 200,
-    data: {
-      contacts: contacts
-    },
-  })
+  res.status(200).json(contacts);
 })
 
 // router.get('/', async (req, res, next) => {
