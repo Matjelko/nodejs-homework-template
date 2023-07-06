@@ -231,8 +231,6 @@ router.patch('/users/avatars', auth, upload.single('avatar'), async (req, res, n
   }
 })
 
-//------------------------------------------------------------------------------------- przed zmianami
-
 router.get('/users/verify/:verificationToken', async (req, res, next) => {
   const user = await User.findOne({ verificationToken: req.params.verificationToken })
 
@@ -308,8 +306,6 @@ router.post('/users/verify/:verificationToken', async (req, res, next) => {
   }
 
 })
-
-//-------------------------------------------------------------------------------------
 
 router.get('/contacts', auth, async (req, res, next) => {
   const contacts = await Contact.find(); 
