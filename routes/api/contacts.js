@@ -263,6 +263,52 @@ router.get('/users/verify/:verificationToken', async (req, res, next) => {
   }
 })
 
+router.post('/users/verify/:verificationToken', async (req, res, next) => {
+  const {email} = req.body
+  const user = await User.findOne({ verificationToken: req.params.verificationToken })
+
+  if(!email) {
+    return res.json({
+      status: "error",
+      code: 400,
+      message: "Missing required field email"
+    })
+  }
+
+  if(email && user.verify === true) {
+    return res.json({
+      status: "error",
+      code: 400,
+      message: "Verification has already passed"
+    })
+  }
+
+  if(email && user.verify === false) {
+    const msg = {
+      to: email,
+      from: 'k-mati11@tlen.pl',
+      subject: 'Please verify your email and registration.',
+      text: `Odnośnik do weryfikcaji maila: /users/verify/:verificationToken, a twój verificationToken to ${user.verificationToken}`
+    }
+
+    sgMail
+      .send(msg)
+      .then(() => {
+        console.log('Email sent');
+      })
+      .catch(error => {
+        console.error(error);
+      })
+    
+    return res.json({
+      status: "success",
+      code: 200,
+      message: "Verification email sent"
+    })
+  }
+
+})
+
 //-------------------------------------------------------------------------------------
 
 router.get('/contacts', auth, async (req, res, next) => {
