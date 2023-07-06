@@ -256,14 +256,15 @@ router.get('/users/verify/:verificationToken', async (req, res, next) => {
 
   if(user) {
     user.verify = true
+    user.verificationToken = "null"
 
     await user.save()
   }
 })
 
-router.post('/users/verify/:verificationToken', async (req, res, next) => {
+router.post('/users/verify', async (req, res, next) => {
   const {email} = req.body
-  const user = await User.findOne({ verificationToken: req.params.verificationToken })
+  const user = await User.findOne({ email })
 
   if(!email) {
     return res.json({
