@@ -200,6 +200,33 @@ router.patch('/users/avatars', auth, upload.single('avatar'), async (req, res, n
   }
 })
 
+//-------------------------------------------------------------------------------------
+
+router.get('/users/verify/:verificationToken'), auth, async (req, res, next) => {
+  const contact = await User.findOne({ _id: req.params.verificationToken })
+
+  if(contact) {
+    return res.json({
+      status: 'success',
+      code: 200,
+      message: 'Verification successful',
+      data: 'OK'
+    })
+  }
+
+  return res.json({
+      status: 'error',
+      code: 404,
+      message: 'User not found',
+      data: 'Not found'
+    })
+  
+  // const id = req.user._id;
+  // const user = await User.findById(id);
+}
+
+//-------------------------------------------------------------------------------------
+
 router.get('/contacts', auth, async (req, res, next) => {
   const contacts = await Contact.find(); 
   res.json({
