@@ -8,6 +8,10 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const Jimp = require('jimp');
+const { nanoid } = require('nanoid');
+const sgMail = require('@sendgrid/mail');
+
+sgMail.setApiKey(process.env.API_KEY)
 
 const {
   Contact,
@@ -64,8 +68,25 @@ router.post('/users/signup', async (req, res, next) => {
     const avatar = gravatar.url({ email })
 
     newUser.avatarURL = avatar
+    newUser.verificationToken = nanoid()
 
     await newUser.save()
+
+    const msg = {
+      to: email,
+      from: 'k-mati11@tlen.pl',
+      subject: 'Please verify your email and registration.',
+      text: `Odnośnik do weryfikcaji maila: /users/verify/:verificationToken, a twój verificationToken to ${newUser.verificationToken}`
+    }
+
+    sgMail
+      .send(msg)
+      .then(() => {
+        console.log('Email sent');
+      })
+      .catch(error => {
+        console.error(error);
+      })
 
     res.json({
       status: "success",
@@ -82,6 +103,7 @@ router.post('/users/signup', async (req, res, next) => {
 router.post('/users/login', async (req, res, next) => {
   const { email, password } = req.body
   const user = await User.findOne({ email })
+  const loginVerify = user.verify
 
   if(!user || !user.validPassword(password)) {
     return res.json({
@@ -89,6 +111,15 @@ router.post('/users/login', async (req, res, next) => {
       code: 400,
       data: "Bad request",
       message: "Incorrect login or password"
+    })
+  }
+
+  if(loginVerify === false){
+    return res.json({
+      status: "error",
+      code: 404,
+      data: "Not found",
+      message: "Incorrect login or password. Check if your login is verified."
     })
   }
 
@@ -200,6 +231,83 @@ router.patch('/users/avatars', auth, upload.single('avatar'), async (req, res, n
   }
 })
 
+router.get('/users/verify/:verificationToken', async (req, res, next) => {
+  const user = await User.findOne({ verificationToken: req.params.verificationToken })
+
+  if(!user) {
+    return res.json({
+      status: 'error',
+      code: 404,
+      message: 'User not found',
+      data: 'Not found'
+    })
+  }
+
+  try {   
+    res.json({
+      status: 'success',
+      code: 200,
+      message: 'Verification successful',
+      data: 'OK'
+    })
+  } catch(error) {
+    next(error)
+  }
+
+  if(user) {
+    user.verify = true
+    user.verificationToken = "null"
+
+    await user.save()
+  }
+})
+
+router.post('/users/verify', async (req, res, next) => {
+  const {email} = req.body
+  const user = await User.findOne({ email })
+
+  if(!email) {
+    return res.json({
+      status: "error",
+      code: 400,
+      message: "Missing required field email"
+    })
+  }
+
+  if(email && user.verify === true) {
+    return res.json({
+      status: "error",
+      code: 400,
+      message: "Verification has already passed"
+    })
+  }
+
+  if(email && user.verify === false) {
+    const msg = {
+      to: email,
+      from: 'k-mati11@tlen.pl',
+      subject: 'Please verify your email and registration.',
+      text: `Odnośnik do weryfikcaji maila: /users/verify/:verificationToken, a twój verificationToken to ${user.verificationToken}`
+    }
+
+    sgMail
+      .send(msg)
+      .then(() => {
+        console.log('Email sent');
+      })
+      .catch(error => {
+        console.error(error);
+      })
+    
+    return res.json({
+      status: "success",
+      code: 200,
+      message: "Verification email sent"
+    })
+  }
+
+})
+
 router.get('/contacts', auth, async (req, res, next) => {
   const contacts = await Contact.find(); 
   res.json({
@@ -280,3 +388,4 @@ router.patch('/contacts/:contactId/favorite', auth, async (req, res, next) => {
 })
 
 module.exports = router
+ 
